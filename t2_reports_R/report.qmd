@@ -1,0 +1,205 @@
+---
+title: "Retrieving Tufman 2 Data with R"
+subtitle: "SPC 2025"
+author: "Jessica Leiria Schattschneider"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+---
+
+# Introduction
+
+This document help Tufman 2 users to retrieve fishing data from Tufman 2 reports. The goal is to see how R can help you access and filter data that matters to your work.
+
+**Steps:**
+
+1.  Connect to Tufman 2 - you need to have a password for Tufman2
+2.  See what reports are available
+3.  Filter reports to find what we need
+4.  Download the data
+
+------------------------------------------------------------------------
+
+# Setup: Loading Our Tools
+
+First, we need to load the "tools" (libraries) that help us work with data.
+
+```{r setup, message=FALSE, warning=FALSE, echo=FALSE}
+# Clear the workspace - start fresh!
+rm(list=ls())
+
+# Load the libraries we need
+library("DT")        # For interactive tables
+library("dplyr")     # For data manipulation
+library("stringr")   # For working with text
+library("purrr")     # For data operations
+
+# Load custom functions from utils.R
+source("utils.R")
+```
+
+------------------------------------------------------------------------
+
+# Step 1: Connect to Tufman 2
+
+To access data, we need to identify ourselves. This is like logging into a website.
+
+But first, you will need to make sure you have (manually) created a file called ".env"
+in the same path where this script is stored. After you create it, copy the content from 
+file `envtemplate` and paste in `.env`, and add your Tufman 2 password after `TUF_PASSWORD=`.
+Make sure there is an empty line after at the end of the document.
+
+
+```{r authentication}
+# Enter your details here
+
+user_name = "jessicals@spc.int" # Your username
+country_code = "SB"             # Your country code (e.g., "VU" for Vanuatu)
+
+# Load or create your access token
+token <- load_token(user_name, country_code)
+```
+
+
+------------------------------------------------------------------------
+
+# Step 2: What Reports Are Available?
+
+Let's see all the reports you have access to in Tufman 2.
+
+```{r load-reports, message=FALSE, warning=FALSE, echo=FALSE}
+# Get list of all available reports
+existing_reports <- get_list_of_t2_reports(
+  token, 
+  country_code, 
+  user_name, 
+  replace = FALSE # talk about what this is doing
+) |>
+  data.frame()
+
+# How many reports do we have access to?
+cat("Total reports available:", nrow(existing_reports), "\n")
+
+```
+
+Now let's look at them in an interactive table:
+
+```{r display-reports}
+# Create an interactive table
+DT::datatable(
+  existing_reports |>
+    dplyr::select(
+      Id = user_report_id,
+      Filters = option_labels,
+      Title = title, 
+      Description = description, 
+      `Last modified` = last_modified_date_time
+    ) |>
+    arrange(Title),
+  filter = "top",  # Adds search boxes at the top
+  options = list(
+    pageLength = 10,
+    dom = 'lftrip',
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+      "}"
+    )
+  )
+)
+```
+
+
+------------------------------------------------------------------------
+
+# Step 3: Filtering by Specific IDs
+
+Sometimes we know exactly which reports we want by their ID numbers:
+
+```{r filter-reports-v2}
+
+# update report_ids based on the reports you are interested in
+report_ids = c(3039, 3040, 3494)
+
+# Select specific reports by ID
+filtered_reports <- existing_reports |>
+  filter(user_report_id %in% report_ids)
+
+cat("Selected reports:", nrow(filtered_reports), "\n")
+```
+
+------------------------------------------------------------------------
+
+# Step 4: Explore Report Attributes
+
+Before downloading data, let's see what attributes (filters/parameters) are available:
+
+```{r explore-attributes}
+# Extract all unique attributes from our filtered reports
+filtered_attrs <- filtered_reports$report_attrs |>
+  paste(collapse = ",") |>           # Combine all attributes
+  str_split(",") |>                  # Split into individual items
+  unlist() |>                        # Flatten the list
+  str_trim() |>                      # Remove extra spaces
+  discard(~ .x == "") |>             # Remove empty entries
+  unique() |>                        # Keep only unique values
+  sort()                             # Sort alphabetically
+
+# Display the attributes
+cat("Available attributes:\n")
+print(filtered_attrs)
+```
+
+------------------------------------------------------------------------
+
+# Step 5: Define Your Filter Values
+
+Now we tell R what specific data we want based on the available attributes we will need to inform for the current selection 
+of reports:
+
+```{r define-parameters}
+
+# Set the parameters for your data download
+# add more parameters based on the filtered_attrs returned in the step above
+attrs <- list(
+  flag_code = "SB",      
+  year = 2024,           # Change this to the year you want
+)
+
+cat("You're requesting data for :")
+for (i in 1:length(attrs)){
+  
+  cat(paste0(
+    names(attrs[i]),
+    ": ", attrs[[i]], " \n"
+  )
+  )
+
+}
+
+```
+
+------------------------------------------------------------------------
+
+# Step 6: Download the Data!
+
+Finally, we're ready to download our data:
+
+```{r download-data, eval=FALSE}
+# Get the report data based on our filters
+report_data <- get_reports(
+  token = token, 
+  user_name = user_name, 
+  country_code = country_code, 
+  filtered_reports = filtered_reports, 
+  attrs = attrs,
+  record_current_date = FALSE,
+  overwrite = TRUE
+)
+
+# Preview the data structure
+cat("Data downloaded successfully!\n")
+```

@@ -60,5 +60,5 @@ rsconnect/
 *.pem
 
 # *.Rproj
-
-exercise_01/data/t2_reports_data/*
+data/*.csv
+data/t2_reports_data/*
