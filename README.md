@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 # ofp-dm-useful-scripts
 
 This is a **public repository** created for maintaining useful scripts
