@@ -31,13 +31,11 @@ them.
 
 Before you start, you'll need to install Git on your computer.
 
--   Installing Git
+- **Windows:** [git-scm.com](https://git-scm.com/download/win)
 
-    - **Windows:** [git-scm.com](https://git-scm.com/download/win)
+- **Linux:** Open Terminal and run
 
-    - **Linux:** Open Terminal and run
-    
-    `sudo apt-get install git` 
+`sudo apt-get install git` 
 
 ### Steps to Clone a Repository
 
@@ -51,59 +49,58 @@ Before you start, you'll need to install Git on your computer.
 
     You can also use an SSH key, but for that you will need to make sure you have one and that you added it to GitHub. For more info on how to that, go to: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 
-#### Step 2: Open Your Terminal or Command Prompt
+#### Step 2: Open Your Terminal or Command Prompt (Windows)
 
-    **Windows:** - Press `Win + R`, type `cmd`, and press Enter - Or search
-    for "Command Prompt" in the Start menu
+Press `Win + R`, type `cmd`, and press Enter - Or search for "Command Prompt" in the Start menu
 
 #### Step 3: Navigate to Where You Want the Repository
 
-    Before cloning, decide where you want to save the repository on your
-    computer (it is like choosing where you want to create a new folder).
-    Use the `cd` (change directory) command:
+Before cloning, decide where you want to save the repository on your
+computer (it is like choosing where you want to create a new folder).
+Use the `cd` (change directory) command:
 
-    ``` bash
-    cd Documents
-    ```
+``` bash
+cd Documents
+```
 
-    The code above means that you are entering inside your `Documents`
-    folder. In this step you need to navigate until the directory in your
-    computer where you want to clone ("download") all the files available in
-    this repository.
+The code above means that you are entering inside your `Documents`
+folder. In this step you need to navigate until the directory in your
+computer where you want to clone ("download") all the files available in
+this repository.
 
-    You can also create a new folder and navigate to it:
+You can also create a new folder and navigate to it:
 
-    ``` bash
-    mkdir Projects
-    cd Projects
-    ```
+``` bash
+mkdir Projects
+cd Projects
+```
 
 #### Step 4: Clone the Repository
 
-    Once you are in the path you want to clone this repo (step above), you
-    can type the following command (the URL you copied):
+Once you are in the path you want to clone this repo (step above), you
+can type the following command (the URL you copied):
 
-    ``` bash
-    git clone https://github.com/PacificCommunity/ofp-dm-useful-scripts.git
-    ```
+``` bash
+git clone https://github.com/PacificCommunity/ofp-dm-useful-scripts.git
+```
 
-    Press Enter and wait for the download to complete. You'll see progress
-    messages as Git downloads the files.
+Press Enter and wait for the download to complete. You'll see progress
+messages as Git downloads the files.
 
 #### Step 5: Access Your Cloned Repository
 
-    Once cloning is complete, navigate into the repository folder:
+Once cloning is complete, navigate into the repository folder:
 
-    ``` bash
-    cd repository-name
-    ```
+``` bash
+cd repository-name
+```
 
-    Now that you've cloned the repository, you can:
+Now that you've cloned the repository, you can:
 
-    -   Open the files in your favorite code editor
-    -   Follow any setup instructions in the project's README
-    -   Make changes and learn about committing and pushing changes back to
-        GitHub
+-   Open the files in your favorite code editor
+-   Follow any setup instructions in the project's README
+-   Make changes and learn about committing and pushing changes back to
+    GitHub
     
 ## Troubleshooting
 
