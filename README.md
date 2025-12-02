@@ -35,7 +35,7 @@ Before you start, you'll need to install Git on your computer.
 
 - **Linux:** Open Terminal and run
 
-`sudo apt-get install git` 
+    `sudo apt-get install git` 
 
 ### Steps to Clone a Repository
 
@@ -47,7 +47,7 @@ Before you start, you'll need to install Git on your computer.
 
    ![alt text](img/image.png) 
 
-    You can also use an SSH key, but for that you will need to make sure you have one and that you added it to GitHub. For more info on how to that, go to: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+You can also use an SSH key, but for that you will need to make sure you have one and that you added it to GitHub. For more info on how to that, go to: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 
 #### Step 2: Open Your Terminal or Command Prompt (Windows)
 
