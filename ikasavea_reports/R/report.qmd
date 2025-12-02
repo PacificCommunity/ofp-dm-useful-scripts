@@ -348,12 +348,12 @@ csv_response <- POST(
 )
 
 # Create output directory if it doesn't exist
-if (!dir.exists("output")) {
-  dir.create("output")
+if (!dir.exists("output_data")) {
+  dir.create("output_data")
 }
 
 # Save the CSV data to file
-output_filename <- "output/catchdata.csv"
+output_filename <- "output_data/catchdata.csv"
 csv_content <- content(csv_response, "text", encoding = "UTF-8")
 write_file(csv_content, output_filename)
 
@@ -423,12 +423,12 @@ filtered_response <- POST(
 )
 
 # Create output directory if it doesn't exist
-if (!dir.exists("output")) {
-  dir.create("output")
+if (!dir.exists("output_data")) {
+  dir.create("output_data")
 }
 
 # Save filtered results
-filtered_filename <- "output/catchdata_specific_species.csv"
+filtered_filename <- "output_data/catchdata_specific_species.csv"
 filtered_content <- content(filtered_response, "text", encoding = "UTF-8")
 write_file(filtered_content, filtered_filename)
 

@@ -12,4 +12,5 @@ __pycache__/
 *report_files/
 *report.html
 *.log
-*output/
+*output_data/
+*output/*
