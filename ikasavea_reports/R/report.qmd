@@ -1,0 +1,453 @@
+---
+title: "SPC Coastal Fisheries Web Application - API"
+subtitle: "R Implementation"
+format:
+  html:
+    code-fold: false
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+author: "Jessica LS"
+date: today
+---
+
+# Overview
+
+This notebook demonstrates how to interact with the **SPC (Pacific Community) Coastal Fisheries Web Application** API to retrieve and analyze landing survey data using R.
+
+1. **Authenticate** with the SPC Coastal Fisheries API
+2. **Explore** available authorities, surveys, and species
+3. **Query** landing survey reports
+4. **Export** data in JSON and CSV formats
+5. **Filter** data by specific criteria
+
+## Prerequisites
+
+Before running this notebook, ensure you have:
+
+- Created a `.env` file with your SPC portal credentials
+- Installed required R packages (see below)
+- Valid access to the SPC Coastal Fisheries Web Application
+
+> **Note:** If you don't have credentials yet, contact Franck Magron, Olivier Loyau, or the Coastal Fisheries team to request access to the [SPC Coastal Fisheries Portal](https://www.spc.int/CoastalFisheries/).
+
+## Installation
+
+```r
+# Install required packages
+install.packages(c("httr", "jsonlite", "dplyr", "readr", "dotenv"))
+```
+
+---
+
+# Import Libraries and Setup Environment
+
+First, we'll import the necessary R libraries and load our environment variables containing the API credentials.
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+# Load required libraries
+library(httr)      # For making HTTP API calls
+library(jsonlite)  # For parsing JSON responses
+library(dplyr)     # For data manipulation
+library(readr)     # For reading/writing CSV files
+library(dotenv)    # For loading environment variables from .env file
+
+# Load environment variables from .env file
+load_dot_env()
+
+# Get credentials from environment variables
+baseUrl <- Sys.getenv("BASEURL")
+```
+
+---
+
+# Step 1: Authentication
+
+Now we'll authenticate with the SPC Coastal Fisheries API using the `/account/SignIn` endpoint. This establishes a session and provides cookies for subsequent API calls.
+
+```{r}
+#| label: authentication
+
+# Authenticate with the SPC Coastal Fisheries API
+connection <- POST(
+  paste0(baseUrl, "account/SignIn"),
+  body = list(
+    username = Sys.getenv("USER"),
+    password = Sys.getenv("PASSWORD")
+  ),
+  encode = "form"
+)
+
+# Check if authentication was successful
+if (status_code(connection) == 200 && length(content(connection)) > 0) {
+  cat("✅ Authentication successful!\n")
+  
+  # Store session cookies for reuse in other API calls
+  session_cookies <- cookies(connection)
+  cat("Session cookies stored for future API requests\n")
+} else {
+  cat("❌ Authentication failed!\n")
+  cat("Please check your credentials in the .env file\n")
+  cat(paste("Status Code:", status_code(connection), "\n"))
+  stop("Authentication failed")
+}
+```
+
+---
+
+# Step 2: Explore Available Authorities
+
+Authorities represent different regions or organizations that manage coastal fisheries. Let's see which authorities your account can access.
+
+```{r}
+#| label: authorities
+
+# Get authorities
+authorities_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/GetAuthorities"),
+  body = list(),
+  encode = "form"
+)
+
+# Parse JSON response
+authorities <- content(authorities_response, "parsed")
+
+# Convert to data frame for easier analysis
+authorities_df <- bind_rows(authorities)
+
+cat(paste("📊 Response: Retrieved", length(authorities), "authorities\n\n"))
+cat("First few authorities:\n")
+print(head(authorities_df))
+```
+
+```{r}
+#| label: unique-authorities
+
+# Analyze the unique authorities available
+unique_auths <- unique(authorities_df$Name)
+
+cat(paste("\n🌍 Your account has access to", length(unique_auths), "unique authorities:\n"))
+cat(paste(rep("=", 60), collapse = ""), "\n")
+
+# Display authorities in a formatted way
+for (i in seq_along(unique_auths)) {
+  cat(sprintf("%2d. %s\n", i, unique_auths[i]))
+}
+
+cat(paste(rep("=", 60), collapse = ""), "\n")
+
+# Store the first authority for use in subsequent examples
+first_authority <- if (length(unique_auths) > 0) unique_auths[1] else NULL
+
+if (!is.null(first_authority)) {
+  cat(paste("📌 We'll use '", first_authority, "' as our example authority for the following demonstrations\n", sep = ""))
+} else {
+  cat("⚠️ No authorities found for this account\n")
+}
+```
+
+---
+
+# Step 3: Discover Available Surveys
+
+Explore what surveys are available for the example authority (above).
+
+```{r}
+#| label: surveys
+
+# Get surveys for the first authority
+cat(paste("Fetching surveys for authority: '", first_authority, "'\n", sep = ""))
+cat("API Call: POST /FieldSurveys/LdsStatistics/GetSurveys\n")
+
+surveys_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/GetSurveys"),
+  body = list(authorities = list(first_authority)),  # Filter by specific authority
+  encode = "json"
+              )
+
+# Parse JSON response
+surveys <- content(surveys_response, "parsed")
+
+# Convert to data frame for analysis
+surveys_df <- bind_rows(surveys)
+unique_surveys <- unique(surveys_df$Name)
+
+cat(paste("\n📈 Found", length(unique_surveys), "surveys for '", first_authority, "':\n", sep = ""))
+cat(paste(rep("=", 60), collapse = ""), "\n")
+
+# Display surveys in a formatted way
+for (i in seq_along(unique_surveys)) {
+  cat(sprintf("%2d. %s\n", i, unique_surveys[i]))
+}
+
+cat(paste(rep("=", 60), collapse = ""), "\n")
+```
+
+---
+
+# Step 4: Explore Available Species
+
+Let's discover what fish species are recorded in the surveys for our example authority.
+
+```{r}
+#| label: species
+
+# Get species information for the first authority
+cat(paste("Fetching species data for authority: '", first_authority, "'\n", sep = ""))
+
+species_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/GetSpecies"),
+  body = list(authorities = list(first_authority)),  # Filter by specific authority
+  encode = "json"
+              )
+
+
+# Parse JSON response
+species <- content(species_response, "parsed")
+
+# Convert to data frame for analysis
+species_df <- bind_rows(species)
+
+# Analyze species groups and individual species
+unique_species_groups <- unique(species_df$SpeciesGroup)
+unique_species <- unique(species_df$Species)
+
+cat(paste("\n🐟 Found", length(unique_species), "unique species organized into", 
+          length(unique_species_groups), "species groups\n"))
+cat("\nSpecies Groups:\n")
+cat(paste(rep("=", 50), collapse = ""), "\n")
+
+for (i in seq_along(unique_species_groups)) {
+  group <- unique_species_groups[i]
+  species_in_group <- species_df %>% 
+    filter(SpeciesGroup == group) %>% 
+    pull(Species) %>% 
+    n_distinct()
+  cat(sprintf("%2d. %s (%d species)\n", i, group, species_in_group))
+}
+
+cat(paste(rep("=", 50), collapse = ""), "\n")
+```
+
+---
+
+# Step 5: Discover Available Reports
+
+Reports are predefined data structures that organize the survey data in different ways. Let's see what reports are available.
+
+```{r}
+#| label: reports
+
+# Get list of available reports
+cat("Fetching available landing survey reports...\n")
+cat("API Call: POST /FieldSurveys/LdsStatistics/GetReports\n")
+
+reports_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/GetReports"),
+  body = list(),
+  encode = "form"
+)
+
+# Parse JSON response
+reports <- content(reports_response, "parsed")
+
+# Convert to data frame for analysis
+reports_df <- bind_rows(reports)
+
+cat(paste("\n📋 Found", nrow(reports_df), "available reports:\n"))
+cat(paste(rep("=", 80), collapse = ""), "\n")
+
+# Display reports with their IDs for reference
+for (i in 1:nrow(reports_df)) {
+  cat(sprintf("%2d. %s\n", i, reports_df$Name_EN[i]))
+}
+
+cat(paste(rep("=", 80), collapse = ""), "\n")
+
+# Store the first report for demonstration
+first_report <- if (length(reports) > 0) reports[[1]] else NULL
+```
+
+---
+
+# Step 6: Export Report Data as JSON
+
+Now let's export actual survey data from our example report. We'll start with the JSON format, which is great for programmatic analysis.
+
+```{r}
+#| label: export-json
+
+# Export report data as JSON for analysis
+firstReportId <- reports[[1]]$Id
+report_name <- reports[[1]]$Name_EN
+
+cat(paste("Exporting data from report: '", report_name, "'\n", sep = ""))
+cat(paste("Report ID:", firstReportId, "\n"))
+cat("API Call: POST /FieldSurveys/LdsStatistics/ExportDataAsJson\n")
+
+# Request data export
+json_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/ExportDataAsJson"),
+  body = list(
+    authorities = list(),      # Empty = all authorities (optional)
+    reportId = firstReportId,  # Mandatory: which report to export
+    surveyIds = list(),        # Empty = all surveys (optional)
+    speciesIds = list()        # Empty = all species (optional)
+  ),
+  encode = "json",
+)
+
+# Parse the JSON response
+response_data <- content(json_response, "parsed")
+
+cat("\n✅ Data export successful!\n")
+
+# Convert the data to a data frame for analysis
+if ("data" %in% names(response_data)) {
+  df_result <- bind_rows(response_data$data)
+  
+  cat(paste("Retrieved", nrow(df_result), "data records\n"))
+  cat(paste("Data contains", ncol(df_result), "columns:\n"))
+  cat(paste(names(df_result), collapse = ", "), "\n")
+  
+  cat(paste("\n📊 First 5 records from '", report_name, "':\n", sep = ""))
+  cat(paste(rep("=", 100), collapse = ""), "\n")
+  print(head(df_result, 5))
+  cat(paste(rep("=", 100), collapse = ""), "\n")
+} else {
+  cat("⚠️ No 'data' field found in response\n")
+}
+```
+
+---
+
+# Step 7: Export Report Data as CSV
+
+CSV format is perfect for sharing with colleagues or importing into Excel and other tools. Let's export the same data as a CSV file.
+
+```{r}
+#| label: export-csv
+
+# Export the same report data as CSV
+cat(paste("Exporting '", report_name, "' data as CSV file...\n", sep = ""))
+cat("API Call: POST /FieldSurveys/LdsStatistics/ExportDataAsCsv\n")
+
+csv_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/ExportDataAsCsv"),
+  body = list(
+    authorities = list(),          # Empty = all authorities (optional)
+    reportId = firstReportId,      # Mandatory: which report to export
+    surveyIds = list(),            # Empty = all surveys (optional)
+    speciesIds = list()            # Empty = all species (optional)
+  ),
+  encode = "json"
+)
+
+# Create output directory if it doesn't exist
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+
+# Save the CSV data to file
+output_filename <- "output/catchdata.csv"
+csv_content <- content(csv_response, "text", encoding = "UTF-8")
+write_file(csv_content, output_filename)
+
+cat("\n✅ CSV export successful!\n")
+cat(paste("📁 Data saved to:", output_filename, "\n"))
+
+# Show some statistics about the exported file
+file_size <- file.info(output_filename)$size
+
+# Count lines in CSV (approximate record count)
+line_count <- length(readLines(output_filename, warn = FALSE))
+
+cat(paste("📈 Approximate records:", format(line_count - 1, big.mark = ","), "(excluding header)\n"))
+cat(paste("📂 File location:", normalizePath(output_filename), "\n"))
+```
+
+---
+
+# Step 8: Advanced Filtering - Export Specific Data
+
+The API allows you to filter data by authorities, surveys, and species. This is useful when you need specific subsets of data rather than everything.
+
+```{r}
+#| label: filtered-export
+
+# Example of filtered data export - specific authority and species
+cat("🔍 Demonstrating filtered data export...\n\n")
+
+# Use a different report for variety (if available)
+if (length(reports) > 1) {
+  second_report <- reports[[2]]
+  selected_report_id <- second_report$Id
+  selected_report_name <- second_report$Name_EN
+} else {
+  # Use the first report if only one is available
+  selected_report_id <- firstReportId
+  selected_report_name <- report_name
+}
+
+cat(paste("📋 Using report: '", selected_report_name, "'\n", sep = ""))
+cat(paste("🌍 Filtering by authority: '", first_authority, "'\n", sep = ""))
+
+# Get a specific species ID for filtering (use first available species)
+if (nrow(species_df) > 0) {
+  sample_species <- species_df[1, ]
+  species_filter <- list(species_df$Id[1])
+  species_name <- species_df$Species[1]
+  cat(paste("🐟 Filtering by species: '", species_name, "'\n", sep = ""))
+} else {
+  # Use example species ID
+  species_filter <- list("d791be4d-593f-42f0-9a97-8c8d2181b9fe")
+  cat("🐟 Using example species filter\n")
+}
+
+cat("\n🔧 API Call: POST /FieldSurveys/LdsStatistics/ExportDataAsCsv (with filters)\n")
+
+# Make filtered API request
+filtered_response <- POST(
+  paste0(baseUrl, "FieldSurveys/LdsStatistics/ExportDataAsCsv"),
+  body = list(
+    authorities = list(first_authority),    # Filter by specific authority
+    reportId = selected_report_id,          # Mandatory report ID
+    surveyIds = list(),                     # Could filter by specific surveys
+    speciesIds = species_filter             # Filter by specific species
+  ),
+  encode = "json"
+)
+
+# Create output directory if it doesn't exist
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+
+# Save filtered results
+filtered_filename <- "output/catchdata_specific_species.csv"
+filtered_content <- content(filtered_response, "text", encoding = "UTF-8")
+write_file(filtered_content, filtered_filename)
+
+cat("\n✅ CSV export successful!\n")
+cat(paste("📁 Data saved to:", filtered_filename, "\n"))
+
+# Show some statistics
+filtered_line_count <- length(readLines(filtered_filename, warn = FALSE))
+cat(paste("📈 Approximate records:", format(filtered_line_count - 1, big.mark = ","), "(excluding header)\n"))
+cat(paste("📂 File location:", normalizePath(filtered_filename), "\n"))
+```
+
+---
+
+**Done!**
+
+You can now:
+
+1. **Analyze the data** using R's powerful data analysis tools (dplyr, ggplot2, etc.)
+2. **Modify filters** to get different subsets (change authorities, surveys, species)
+3. **Integrate** this code into your own data processing workflows
+4. **Export** data in formats suitable for sharing with colleagues

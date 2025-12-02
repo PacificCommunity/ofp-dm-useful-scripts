@@ -39,6 +39,9 @@ library("purrr")     # For data operations
 
 # Load custom functions from utils.R
 source("utils.R")
+
+dir.create("./data/", showWarnings = FALSE, recursive = TRUE)
+
 ```
 
 ------------------------------------------------------------------------
@@ -56,8 +59,8 @@ Make sure there is an empty line after at the end of the document.
 ```{r authentication}
 # Enter your details here
 
-user_name = "jessicals@spc.int" # Your username
-country_code = "SB"             # Your country code (e.g., "VU" for Vanuatu)
+user_name = "your_email@spc.int" # Your username
+country_code = "XX"             # Your country code (e.g., "VU" for Vanuatu, "SB" for Solomon Islands)
 
 # Load or create your access token
 token <- load_token(user_name, country_code)
