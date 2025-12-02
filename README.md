@@ -33,12 +33,12 @@ Before you start, you'll need to install Git on your computer.
 
 -   Installing Git
 
-**Windows:** 1. Download Git from
-[git-scm.com](https://git-scm.com/download/win) 2. Run the installer and
-follow the setup wizard (default options work fine)
+    - **Windows:** 1. Download Git from
+    [git-scm.com](https://git-scm.com/download/win) 2. Run the installer and
+    follow the setup wizard (default options work fine)
 
-**Linux:** - Ubuntu/Debian: Open Terminal and run
-`sudo apt-get install git` - Fedora: Run `sudo dnf install git`
+    - **Linux:** - Ubuntu/Debian: Open Terminal and run
+    `sudo apt-get install git` - Fedora: Run `sudo dnf install git`
 
 ### Steps to Clone a Repository
 
@@ -46,12 +46,14 @@ follow the setup wizard (default options work fine)
 
 1.  Look for the green **Code** button near the top right of this page
 2.  Click it to reveal a dropdown menu
-3.  Copy the URL shown (it should look like
-    `git@github.com:PacificCommunity/ofp-dm-useful-scripts.git`)
+3.  Copy the HTTPS URL shown (it should look like
+    `https://github.com/PacificCommunity/ofp-dm-useful-scripts.git`)
+
+   ![alt text](img/image.png) 
+
+You can also use an SSH key, but for that you will need to make sure you have one and that you added it to GitHub. For more info on how to that, go to: [Generating a new SSH key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 
 #### Step 2: Open Your Terminal or Command Prompt
-
-In your computer:
 
 **Windows:** - Press `Win + R`, type `cmd`, and press Enter - Or search
 for "Command Prompt" in the Start menu
@@ -84,7 +86,7 @@ Once you are in the path you want to clone this repo (step above), you
 can type the following command (the URL you copied):
 
 ``` bash
-git clone git@github.com:PacificCommunity/ofp-dm-useful-scripts.git
+git clone https://github.com/PacificCommunity/ofp-dm-useful-scripts.git
 ```
 
 Press Enter and wait for the download to complete. You'll see progress
