@@ -1,6 +1,6 @@
-# SPC Coastal Fisheries Web Application Python Client
+# SPC Coastal Fisheries Web Application - API data retrieval
 
-This project provides a Jupyter notebook to connect and interact with the SPC Coastal Fisheries Web Application. 
+This project provides a Jupyter notebook to connect and interact with the SPC Coastal Fisheries Web Application through API calls. 
 
 Go to folder `python` if you want to run the process in a Jupyter notebook or to `R` if you prefer to use R and qmd files. 
 
