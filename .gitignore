@@ -12,3 +12,4 @@ __pycache__/
 *report_files/
 *report.html
 *.log
+*output/
