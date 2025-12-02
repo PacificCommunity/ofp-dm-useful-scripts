@@ -33,12 +33,11 @@ Before you start, you'll need to install Git on your computer.
 
 -   Installing Git
 
-    - **Windows:** 1. Download Git from
-    [git-scm.com](https://git-scm.com/download/win) 2. Run the installer and
-    follow the setup wizard (default options work fine)
+    - **Windows:** [git-scm.com](https://git-scm.com/download/win)
 
-    - **Linux:** - Ubuntu/Debian: Open Terminal and run
-    `sudo apt-get install git` - Fedora: Run `sudo dnf install git`
+    - **Linux:** Open Terminal and run
+    
+    `sudo apt-get install git` 
 
 ### Steps to Clone a Repository
 
