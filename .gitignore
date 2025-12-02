@@ -5,3 +5,10 @@
 
 .env
 *.env
+__pycache__/
+*.pyc
+.venv/
+*.venv/
+*report_files/
+*report.html
+*.log
