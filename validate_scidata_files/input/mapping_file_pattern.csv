@@ -1,0 +1,30 @@
+file_pattern,template_name,data_submission
+ace,ace,Annual Catch Estimates
+ll_agg_vessel,ce_agg_vessel_ll,Aggregated Vessels - Longline
+ll_agg_effort,ce_agg_effort_ll,Aggregated Effort - Longline
+pl_agg_effort,ce_agg_effort_pl,Aggregated Effort - Pole-and-Line
+ps_agg_effort,ce_agg_effort_ps,Aggregated Effort - Purse Seine
+trip_ll,op_trip_ll,Tripdata Logbook - Longline
+trip_ps,op_trip_ps,Tripdata Logbook - Purse Seine
+activity_ll,op_activity_ll,Activity Logbook - Longline
+activity_ps,op_activity_ps,Activity Logbook - Purse Seine
+catch_ll,op_catch_ll,Catch Logbook - Longline
+catch_ps,op_catch_ps,Catch Logbook - Purse Seine
+n_vessels,n_vessels_agg,Number of Vessels Active - Aggregated (not Troll)
+,n_vessels_agg_troll,Number of Vessels Active - Troll
+,ce_agg_catch_ll,Aggregated Catch - Longline
+,ce_agg_catch_ps,Aggregated Catch - Purse Seine
+,ce_agg_vessel_ps,Aggregated Vessels - Purse Seine
+,ce_agg_catch_pl,Aggregated Catch - Pole-and-Line
+,ce_agg_vessel_pl,Aggregated Vessels - Pole-and-Line
+,ce_agg_catch_tr,Aggregated Catch - Troll
+,ce_agg_effort_tr,Aggregated Effort - Troll
+,ce_agg_vessel_tr,Aggregated Vessels - Troll
+,op_trip_pl,Tripdata Logbook - Pole-and-Line
+,op_activity_pl,Activity Logbook - Pole-and-Line
+,op_catch_pl,Catch Logbook - Pole-and-Line
+,op_trip_tr,Tripdata Logbook - Troll
+,op_activity_tr,Activity Logbook - Troll
+,op_catch_tr,Catch Logbook - Troll
+,length_freq,Size Composition - Length Frequency
+,weight_freq,Size Composition - Weight Frequency

@@ -1,0 +1,176 @@
+---
+title: "File Validation Report"
+format:
+  html:
+    theme: flatly
+    toc: true
+    toc-depth: 2
+    toc-title: "Contents"
+    embed-resources: true
+    code-fold: true
+params:
+  last_run: "2024-04-04"
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+library(gt)
+library(scales)
+library(janitor)
+
+data <- read.csv("output/log_validation.csv")
+
+truncate_str <- function(x, n = 50) {
+  if_else(nchar(x) > n, paste0(substr(x, 1, n), "..."), x)
+}
+
+data <- data |>
+  mutate(
+  errors.check        = truncate_str(errors.check, 50),
+  errors.failure_case = truncate_str(errors.failure_case, 80)
+) |>
+  mutate(errors.check = case_when(errors.check == "column_in_dataframe" ~ "missing_column_in_dataframe",
+                   .default = errors.check))  |>
+  mutate( errors.column = case_when(is.na(errors.column) ~ errors.failure_case,
+                                    .default = errors.column))
+
+
+n_total <- data |> distinct(filename) |> nrow()
+n_passed <- data |> distinct(filename, status) |> filter(status != "Validation failed") |> nrow()
+n_failed <- n_total - n_passed
+pct_passed <- round(100 * n_passed / n_total, 1)
+
+res_filename_summary <- data |>
+  distinct(status, filename) |>
+  group_by(status) |>
+  summarise(n = n()) |>
+  mutate(percent = round(100 * n / sum(n), 2)) |>
+  ungroup()
+
+res_filename_summary_cc <- data |>
+  distinct(status, filename, country_code) |>
+  group_by(country_code, status) |>
+  summarise(n = n(), .groups = "drop_last") |>
+  mutate(percent = round(100 * n / sum(n), 2)) |>
+  ungroup()
+
+errors_check <- data |>
+  filter(status == "Validation failed") |>
+  group_by(country_code, filename, errors.column, errors.check, errors.failure_case) |>
+  summarise(n = n(), .groups = "drop") |>
+  arrange(country_code, filename)
+
+error_summary_by_check <- data |>
+  filter(status == "Validation failed") |>
+  group_by(errors.check, errors.column) |>
+  summarise(
+    n_failures  = n(),
+    n_files     = n_distinct(filename),
+    n_countries = n_distinct(country_code),
+    .groups = "drop"
+  ) |>
+  arrange(desc(n_failures))
+```
+
+## Overview
+
+- Validation run: **`r params$last_run`**
+
+- Total files: **`r n_total`**
+
+- Passed: **`r n_passed` (`r pct_passed`%)**
+
+- Failed: **`r n_failed`**
+
+---
+
+## By country
+
+Files that failed validation per country. Countries with no failures are omitted.
+```{r country-table, echo=FALSE}
+res_filename_summary_cc |>
+  pivot_wider(names_from = status, values_from = c(n, percent), values_fill = 0) |>
+  clean_names() |>
+  select(country_code,
+         passed = `n_all_data_passed_validation`,
+         pct_passed = `percent_all_data_passed_validation`,
+         failed = `n_validation_failed`,
+         pct_failed = `percent_validation_failed`) |>
+  filter(failed > 0) |>
+  arrange(desc(pct_failed)) |>
+  gt() |>
+  cols_label(
+    country_code = "Country",
+    passed       = "Passed",
+    pct_passed   = "%",
+    failed       = "Failed",
+    pct_failed   = "%"
+  ) |>
+  fmt_number(columns = c(pct_passed, pct_failed), decimals = 1) |>
+  data_color(
+    columns = pct_failed,
+    palette = c("#FDECEA", "#C0392B")
+  ) |>
+  tab_spanner(label = "Passed", columns = c(passed, pct_passed)) |>
+  tab_spanner(label = "Failed", columns = c(failed, pct_failed)) |>
+  tab_options(table.width = pct(100), table.font.size = 13)
+```
+
+---
+
+## Error summary
+
+The table below identifies which validation checks and columns are generating the most failures, across all countries. These are the highest-priority issues to resolve.
+```{r error-summary-table, echo=FALSE}
+error_summary_by_check |>
+  gt() |>
+  cols_label(
+    errors.check        = "Check",
+    errors.column       = "Column",
+    n_failures          = "Total failures",
+    n_files             = "Files affected",
+    n_countries         = "Countries"
+  ) |>
+  data_color(
+    columns = n_failures,
+    palette = c("#FDECEA", "#C0392B")
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(columns = errors.check)
+  ) |>
+  tab_options(table.width = pct(100), table.font.size = 13)
+```
+
+---
+
+## Error detail by country
+
+Expand each country to review the specific files and failure cases that need attention.
+```{r error-detail, results='asis', echo=FALSE}
+countries_with_errors <- errors_check |> pull(country_code) |> unique() |> sort()
+
+for (cc in countries_with_errors) {
+  cat(paste0("\n### ", cc, "\n\n"))
+  
+  tbl <- errors_check |>
+    filter(country_code == cc) |>
+    select(filename, errors.column, errors.check, errors.failure_case, n) |>
+    arrange(filename, errors.check)
+  
+  print(
+    tbl |>
+      gt() |>
+      cols_label(
+        filename             = "File",
+        errors.column        = "Column",
+        errors.check         = "Check",
+        errors.failure_case  = "Failure case",
+        n                    = "Count"
+      ) |>
+      data_color(columns = n, palette = c("#FFF8E1", "#E65100")) |>
+      tab_options(table.width = pct(100), table.font.size = 12)
+  )
+  
+  cat("\n\n")
+}
+```
