@@ -1,0 +1,32 @@
+---
+title: "op_2nd_validation"
+format: html
+editor: visual
+---
+
+## Abstract solution
+
+
+```{r}
+# 1. create a chunck (or function) that reads one trip file (one that passed validation): 
+  # a - check if all rows are unique
+  # b - store result in a dataframe (logs), something like: filename: x; rule_name: check_unique, status: y, errors (any addional info that can help us understand why it failed, if failed)
+```
+
+```{r}
+
+# 2. create a chunck (or function) that reads the activity file related to the trip above
+  # a - check if all rows are unique
+  # b - check if all trip ids are listed in the trip id files
+  # c - store results like in 1.b.
+```
+
+
+```{r}
+# 3. create a chunck (or function) that reads the catch file related to the trip above
+  # a - check if all rows are unique
+  # b - check if all trip ids are listed in the trip id files
+  # c - check if all trip ids are listed in the activity id files
+  # d - store results like in 1.b.
+```
+
