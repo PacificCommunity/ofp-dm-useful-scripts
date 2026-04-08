@@ -12,7 +12,7 @@ source("utils.R")
 # 2. Configuration ####
 API_BASE_URL <- "https://scidata-validator.fame.spc.int/"
 endpoint_validate <- "api/v1/validate"
-country_codes <- c()  # enter your country code here, can be a single one 
+country_codes <- c("jp", "id", "ph", "us")  # enter your country code here, can be a single one 
                       # or multiple codes: c("jp", "id", "ph", "us")
 
 # csv file that maps files for validation and their associated standards (templates)

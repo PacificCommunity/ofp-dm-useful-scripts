@@ -4,6 +4,10 @@ library(tidyverse)
 library(tidyr)
 library(gt)
 
+# create folders in case they don't exist
+dir.create("input/")
+dir.create("output/")
+
 options(scipen = 999)
 # Helper function for null coalescing
 `%||%` <- function(x, y) {
