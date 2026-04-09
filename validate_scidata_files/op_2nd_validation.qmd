@@ -11,7 +11,7 @@ editor: visual
 # 1. create a chunck (or function) that reads one trip file (one that passed validation): 
   # a - check if all ids are unique
   # b - store result in a dataframe (logs), something like: filename: x; rule_name: check_unique, status: y, errors (any addional info that can help us understand why it failed, if failed)
-
+source("utils.R")
 # define path
 trip_file = "ph_files/trip_ll_ph_2024.csv"
 activity_file = "ph_files/activity_ll_ph_2024.csv"
@@ -105,7 +105,81 @@ unique(unique_trips_in_activity %in% unique_trips_in_trips)
 ```{r}
 # 3. create a chunck (or function) that reads the catch file related to the catch above
   # a - check if all ids are unique - combination of trip_id, activity and sp_code should be unique
-  # b - check if all trip ids are listed in the trip_df
+# b - check if all trip ids are listed in the trip_df
   # c - check if all activity ids are listed in the activity_df
   # d - store results like in 1.b.
+
+
+# are all IDs the same in all dataframes? [True- they have all the exact same IDs, False- they are some different IDs present]
+
+setequal(catch_df$trip_id, trip_df$trip_id) &&
+setequal(catch_df$trip_id, activity_df$trip_id)
+
+#If False identify which are different
+# IDs in catch_df but not in trip_df
+setdiff(catch_df$trip_id, trip_df$trip_id)
+# IDs in trip_df but not in catch_df
+setdiff(trip_df$trip_id, catch_df$trip_id)
+# IDs in catch_df but not in activity_df
+setdiff(catch_df$trip_id, activity_df$trip_id)
+# IDs in activity_df but not in catch_df
+setdiff(activity_df$trip_id, catch_df$trip_id)
+
+#checking 
+
+check_duplicates <- function(df, df_name) {
+  
+  result <- list()  # store all outputs
+
+  # 1️⃣ trip_id duplicates
+  if("trip_id" %in% names(df)) {
+    trip_dups <- df %>%
+      count(trip_id, name = "count") %>%
+      filter(count > 1) %>%
+      mutate(type = "trip_id_only",
+             activity_id = NA_character_,
+             source_df = df_name)
+    result <- append(result, list(trip_dups))
+  }
+
+  # 2️⃣ activity_id duplicates
+  if("activity_id" %in% names(df)) {
+    activity_dups <- df %>%
+      count(activity_id, name = "count") %>%
+      filter(count > 1) %>%
+      mutate(type = "activity_id_only",
+             trip_id = NA_character_,
+             source_df = df_name)
+    result <- append(result, list(activity_dups))
+  }
+
+  # 3️⃣ trip_id + activity_id combination duplicates
+  if(all(c("trip_id","activity_id") %in% names(df))) {
+    comb_dups <- df %>%
+      count(trip_id, activity_id, name = "count") %>%
+      filter(count > 1) %>%
+      mutate(type = "trip_activity_combination",
+             source_df = df_name)
+    result <- append(result, list(comb_dups))
+  }
+
+  # Combine all results safely
+  if(length(result) > 0) {
+    bind_rows(result) %>%
+      select(trip_id, activity_id, count, type, source_df)
+  } else {
+    # Return empty tibble with same columns if no duplicates
+    tibble(trip_id=character(), activity_id=character(),
+           count=integer(), type=character(), source_df=character())
+  }
+}
+
+dup_summary_all <- bind_rows(
+  check_duplicates(catch_df, "catch_df"),
+  check_duplicates(trip_df, "trip_df"),
+  check_duplicates(activity_df, "activity_df")
+)
+
+print(dup_summary_all)
+
 ```
