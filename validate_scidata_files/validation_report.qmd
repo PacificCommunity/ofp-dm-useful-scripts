@@ -1,5 +1,5 @@
 ---
-title: "File Validation Report"
+title: "Scidata Validation Errors Report"
 format:
   html:
     theme: flatly
@@ -11,14 +11,29 @@ format:
 params:
   last_run: "2024-04-04"
 ---
-```{r setup, include=FALSE}
+
+```{r check-all-passed, include=FALSE}
 library(tidyverse)
 library(gt)
-library(scales)
 library(janitor)
 
-data <- read.csv("output/log_validation.csv")
+data <- read.csv("output/log_validation.csv") |>
+  mutate(across(everything(), as.character)) |>
+  mutate(status = case_when(status == "Submission year validation failed" ~ "Validation failed",
+                            .default = status))
+all_passed <- all(data$status == "All data passed validation")
+```
 
+```{r show-result, echo=FALSE}
+if (all_passed) {
+  cat("✅ All validations passed successfully." )
+  knitr::knit_exit()
+}
+```
+
+
+
+```{r setup, include=FALSE}
 truncate_str <- function(x, n = 50) {
   if_else(nchar(x) > n, paste0(substr(x, 1, n), "..."), x)
 }

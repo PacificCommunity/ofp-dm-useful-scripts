@@ -4,6 +4,10 @@ library(tidyverse)
 library(tidyr)
 library(gt)
 
+# create folders in case they don't exist
+dir.create("input/")
+dir.create("output/")
+
 options(scipen = 999)
 # Helper function for null coalescing
 `%||%` <- function(x, y) {
@@ -152,8 +156,7 @@ validate_csv <- function(base_url,
                          endpoint,
                          template_name,
                          file_path,
-                         submission_year,
-                         return_details = FALSE
+                         submission_year = NA
                          ) {
   
   # Check if file exists
@@ -169,14 +172,11 @@ validate_csv <- function(base_url,
   # Construct endpoint URL
   url <- paste0(base_url, endpoint, "/", template_name)
   
-  # Add query parameter if needed
-  if (return_details) {
-    url <- paste0(url, "?return_details=true")
-  }else{
-    url <- paste0(url, "?return_details=false")
-  }
-  if (submission_year){
-    url <- paste0(url, "&?submission_years=", as.character(submission_year))
+  # Add query parameter - now always true
+  url <- paste0(url, "?return_details=true")
+  
+  if (submission_year && !is.na(submission_year)){
+    url <- paste0(url, "&submission_years=", as.character(submission_year))
   }
   
   # Make POST request
@@ -239,15 +239,26 @@ validate_csv <- function(base_url,
 
 ## 1. Prepare data to be validated ####
 
-build_file_inventory <- function(country_codes, templates_pattern) {
+build_file_inventory <- function(country_codes, templates_pattern, only_one_year = TRUE) {
+  
+  # if you have more than one year of data submissions in your folder, please use
+  # the same pattern to name them, specifying the year of that submission at the end
+  # of the file name like: {file_pattern}_{year}
+  
   results <- list()
   
   for (cc in country_codes) {
     cc_dir <- paste0(tolower(cc), "_files/")
     all_files <- list.files(cc_dir)
     
+    
     for (i in seq_len(nrow(templates_pattern))) {
-      pattern <- paste0(templates_pattern$file_pattern[i], "_")
+      if (only_one_year){
+        pattern <- paste0(templates_pattern$file_pattern[i])
+      }else{
+        pattern <- paste0(templates_pattern$file_pattern[i], "_")
+      }
+      
       matched <- all_files[grepl(pattern, all_files)]
       
       if (length(matched) == 0) next
@@ -262,10 +273,9 @@ build_file_inventory <- function(country_codes, templates_pattern) {
     }
   }
   
-  bind_rows(results) |>
-    mutate(submission_year = parse_number(files))
+  suppressWarnings(bind_rows(results) |>
+    mutate(submission_year = parse_number(files)))
 }
-
 
 ## 4. Validate a CSV file ####
 
@@ -278,11 +288,10 @@ validate_files <- function(df_files, base_url, endpoint) {
       endpoint        = endpoint,
       template_name   = df_files$template_name[i],
       file_path       = df_files$files[i],
-      submission_year = df_files$submission_year[i],
-      return_details  = TRUE
+      submission_year = df_files$submission_year[i]
     )
     
-    if (r$message == "Validation failed") {
+    if (!(r$message %in% "All data passed validation")) {
       r_df <- data.frame(errors = r$errors, status = r$message)
     } else {
       r_df <- data.frame(status = r$message)
