@@ -8,6 +8,7 @@ This workflow validates CSV data files against the Scidata templates via the val
 
 1.  Create a `{cc}_files/` folder (e.g. `ph_files/`) and paste your CSV files inside
 2.  Check `input/mapping_file_pattern.csv` — update file_pattern to match your csv filenames
+2.1 At the end of each filename add: "_"{fishing_year} (for example, for the 2026 submission we are expecting all the data from 2025 fishing year, so your ace csv file should be named something like: `ace_2025.csv`)
 3.  Open `main.R` and set country_codes \<- e.g.: c("PH")
 4.  Run `main.R` — results and report will be saved to `output/`
 
@@ -55,7 +56,7 @@ project/
 The file `input/mapping_file_pattern.csv` tells the workflow which files to validate and which template to validate them against. It must contain exactly three columns:
 
 | Column | Description |
-|----|----|
+|------------------------------------|------------------------------------|
 | `file_pattern` | The filename prefix used to identify files belonging to this template |
 | `template_name` | The exact template name as registered in the Scidata API |
 | `data_submission` | The exact Data Type in the Scidata Submission Portal |
@@ -71,7 +72,7 @@ The file `input/mapping_file_pattern.csv` tells the workflow which files to vali
 | ll_agg_effort  | ce_agg_effort_ll | Aggregated Effort - Longline      |
 | pl_agg_effort  | ce_agg_effort_pl | Aggregated Effort - Pole-and-Line |
 
-With this mapping, any file in a `{cc}_files/` folder whose name starts with `catch_estimate_` will be validated against the `ace` template which is used in the Scidata Portal to validate the Annual Catch Estimates submissions.
+With this mapping, any file in a `{cc}_files/` folder whose name starts with `catch_estimate` will be validated against the `ace` template which is used in the Scidata Portal to validate the Annual Catch Estimates submissions.
 
 ### How file matching works in the main.R script
 
@@ -112,7 +113,7 @@ Run `main.R` in full. It will:
 ## Output
 
 | File | Description |
-|----|----|
+|------------------------------------|------------------------------------|
 | `output/log_validation.csv` | Raw validation results, one row per error per file |
 | `output/validation_report_{date}.html` | Self-contained HTML report — can be shared without any other files |
 
