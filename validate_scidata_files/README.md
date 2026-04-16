@@ -7,9 +7,13 @@ This workflow validates CSV data files against the Scidata templates via the val
 ## TL;DR
 
 1.  Create a `{cc}_files/` folder (e.g. `ph_files/`) and paste your CSV files inside
+
 2.  Check `input/mapping_file_pattern.csv` — update file_pattern to match your csv filenames
-2.1 At the end of each filename add: "_"{fishing_year} (for example, for the 2026 submission we are expecting all the data from 2025 fishing year, so your ace csv file should be named something like: `ace_2025.csv`)
+
+    *2.1* At the end of each filename add: "\_"{fishing_year} (for example, for the 2026 submission we are expecting all the data from 2025 fishing year, so your ace csv file should be named something like: `ace_2025.csv`)
+
 3.  Open `main.R` and set country_codes \<- e.g.: c("PH")
+
 4.  Run `main.R` — results and report will be saved to `output/`
 
 ------------------------------------------------------------------------
