@@ -1,0 +1,236 @@
+---
+title: "Retrieving NSAP Data with R"
+subtitle: "SPC 2026"
+author: "Jessica Leiria Schattschneider"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+---
+
+# Introduction
+
+This document help NSAP users to retrieve fishing data from NSAP reports. The goal 
+is to see how R can help you access and filter data that matters to your work.
+
+**Steps:**
+
+1.  Connect to NSAP - you need to have a password for NSAP
+2.  See what reports are available
+3.  Filter reports to find what we need
+4.  Download the data
+
+------------------------------------------------------------------------
+
+```{r setup, message=FALSE, warning=FALSE, echo=FALSE}
+# Clear the workspace - start fresh!
+rm(list=ls())
+
+# Load the libraries we need
+library("DT")        # For interactive tables
+library("dplyr")     # For data manipulation
+library("stringr")   # For working with text
+library("purrr")     # For data operations
+library(httr)
+
+base_url = "https://nsap.ofp.spc.int/" # Base URL for T2 API (https://www.spc.int) 
+                                       # or to nsap (https://nsap.ofp.spc.int/)
+# Load custom functions from utils.R
+source("utils.R")
+
+dir.create("./data/", showWarnings = FALSE, recursive = TRUE)
+
+```
+
+
+# Step 1: Connect to NSAP
+
+To access data, we need to identify ourselves. This is like logging into a website.
+
+But first, you will need to make sure you have (manually) created a file called `.env`
+in the same path where this script is stored. After you create it, copy the content from 
+file `envtemplate` and paste in `.env`, and add your NSAP password after `NSAP_PASSWORD`. 
+Make sure there is an empty line after at the end of the document.
+
+You can also add your Tufman 2 password after `TUF_PASSWORD` if you have one and want to
+download data from this platform too, but this is not required. If you are only interested
+in NSAP data, you can leave the `TUF_PASSWORD` line as is or delete the line entirely.
+
+You will also need to include the email associated with your NSAP credentials in the 
+`user_name` variable in the chunck below.
+
+```{r authentication}
+# Enter your details here
+
+user_name = "YOUR-EMAIL@ORG.INT" # Your username (NSAP login credential)
+region_code = "R03"             # Select your region of interest
+
+# Load or create your access token
+token <- load_token(user_name, country_code = 'HQ', base_url) 
+
+```
+
+
+------------------------------------------------------------------------
+
+# Step 2: What Reports Are Available?
+
+Let's see all the reports you have access to in NSAP.
+
+```{r load-reports, message=FALSE, warning=FALSE, echo=FALSE, include = FALSE}
+# Get list of all available reports
+existing_reports <- get_list_of_t2_reports(
+  token, 
+  region_code, 
+  user_name, 
+  base_url = 'https://nsap.ofp.spc.int/',
+  replace = FALSE # talk about what this is doing
+) |>
+  data.frame()
+
+result <- httr::GET(
+  url = "https://nsapapi.ofp.spc.int/api/ReportDefinition/AllSimple",
+  add_headers(
+    "accept"        = "application/json, text/plain, */*",
+    "authorization" = paste("Bearer", token),
+    "content-type"  = "application/json",
+    "tufinstance"   = "R03",
+    "tufmodule"     = "General",
+    "tufuser"       = "jessicals@spc.int"
+  )
+)
+
+# status_code(result)
+# How many reports do we have access to?
+
+```
+
+Now let's look at them in an interactive table:
+
+```{r display-reports, echo=FALSE}
+
+cat("Total reports available:", nrow(existing_reports), "\n")
+
+
+# Create an interactive table
+DT::datatable(
+  existing_reports |>
+    dplyr::select(
+      Id = user_report_id,
+      Filters = option_labels,
+      Title = title, 
+      Description = description, 
+      `Last modified` = last_modified_date_time
+    ) |>
+    arrange(Title),
+  filter = "top",  # Adds search boxes at the top
+  options = list(
+    pageLength = 10,
+    dom = 'lftrip',
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+      "}"
+    )
+  )
+)
+```
+
+
+------------------------------------------------------------------------
+
+# Step 3: Filtering by Specific IDs
+
+Sometimes we know exactly which reports we want by their ID numbers:
+
+```{r filter-reports-v2}
+
+# update report_ids based on the reports you are interested in
+report_ids = c(7)
+
+# Select specific reports by ID
+filtered_reports <- existing_reports |>
+  filter(user_report_id %in% report_ids)
+
+cat("Selected reports:", nrow(filtered_reports), "\n")
+```
+
+
+
+## Step 3.1: Explore Report Attributes
+
+Before downloading data, let's see what attributes (filters/parameters) are available:
+
+```{r explore-attributes}
+# Extract all unique attributes from our filtered reports
+filtered_attrs <- filtered_reports$report_attrs |>
+  paste(collapse = ",") |>           # Combine all attributes
+  str_split(",") |>                  # Split into individual items
+  unlist() |>                        # Flatten the list
+  str_trim() |>                      # Remove extra spaces
+  discard(~ .x == "") |>             # Remove empty entries
+  unique() |>                        # Keep only unique values
+  sort()                             # Sort alphabetically
+
+# Display the attributes
+cat("Available attributes:\n")
+print(filtered_attrs)
+```
+
+
+
+## Step 3.2: Define Your Filter Values
+
+
+Make sure you check in NSAP the attributes that are mandatory, unfortunately we cannot
+access this information programatically. 
+
+Now we tell R what specific data we want based on the available attributes we will need to inform for the current selection 
+of reports:
+
+```{r define-parameters}
+attrs <- list(
+  "year" = 2024
+)
+
+```
+
+You're requesting data for:
+```{r define-parameters-print, echo = FALSE}
+
+for (i in 1:length(attrs)){
+  
+  cat(paste0(
+    names(attrs[i]),
+    ": ", attrs[[i]], " \n"
+  )
+  )
+
+}
+
+```
+
+------------------------------------------------------------------------
+
+# Step 6: Download the Data!
+
+Finally, we're ready to download our data:
+
+```{r download-data, eval=FALSE}
+# Get the report data based on our filters
+report_data <- get_reports(
+  token = token, 
+  user_name = user_name,
+  base_url = "https://nsapapi.ofp.spc.int/api/ReportDefinition/DownloadResults",
+  country_code = region_code, 
+  filtered_reports = filtered_reports, 
+  attrs = attrs,
+  record_current_date = FALSE,
+  overwrite = TRUE
+)
+
+# Preview the data structure
+cat("Data downloaded successfully!\n")
+```

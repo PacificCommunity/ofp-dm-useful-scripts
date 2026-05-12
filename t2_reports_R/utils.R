@@ -11,19 +11,42 @@ library("jsonlite")
 load_dot_env()
 
 # function to generate a token
-generate_token <- function(user_name, country_code){
+generate_token <- function(user_name, country_code, base_url = "https://www.spc.int/"){
   
-  result <- run(
-    "curl",
-    args = c(
-      "-X", "POST",
-      "https://www.spc.int/ofp/tufman2api/api/ApiAccess/GetToken",
-      "-H", "Content-Type: application/json",
-      "-H", paste0("TufInstance: ", country_code),
-      "-H", paste0("TufUser: ", user_name),
-      "-d", sprintf('{"userEmail": "%s", "password": "%s"}', user_name, Sys.getenv("TUF_PASSWORD"))
+  if (base_url == "https://nsap.ofp.spc.int/"){
+    url_token = "https://nsapapi.ofp.spc.int/api/ApiAccess/GetToken"
+    
+    result <- run(
+      "curl",
+      args = c(
+        "-X", "POST",
+        url_token,
+        "-H", "Content-Type: application/json",
+        "-H", paste0("TufInstance: ", country_code),
+        "-H", paste0("TufUser: ", user_name),
+        "-d", sprintf('{"userEmail": "%s", "password": "%s"}', user_name, Sys.getenv("NSAP_PASSWORD"))
+      )
     )
-  )
+    
+  }else if (base_url == "https://www.spc.int/"){
+    url_token = "https://www.spc.int/ofp/tufman2api/api/ApiAccess/GetToken"
+    
+    result <- run(
+      "curl",
+      args = c(
+        "-X", "POST",
+        url_token,
+        "-H", "Content-Type: application/json",
+        "-H", paste0("TufInstance: ", country_code),
+        "-H", paste0("TufUser: ", user_name),
+        "-d", sprintf('{"userEmail": "%s", "password": "%s"}', user_name, Sys.getenv("TUF_PASSWORD"))
+      )
+    )
+    
+  }else{
+    stop("The base url you entered is not valid, please use either 'https://www.spc.int/' or 'https://nsap.ofp.spc.int/'")
+  }
+  print(base_url)
   
   if (result$stdout == ""){
     stop("There was an issue with your request. Maybe you used the wrong country code?")
@@ -54,7 +77,7 @@ generate_token <- function(user_name, country_code){
 }  
 
 # function to check if token exits and is valid, otherwise create one
-load_token <- function(user_name, country_code){
+load_token <- function(user_name, country_code, base_url = "https://www.spc.int/"){
   
   if (file.exists("token.RData")) {
     token_data <- readRDS('token.RData')
@@ -68,19 +91,32 @@ load_token <- function(user_name, country_code){
     } else {
       cat("Token expired...\n")
       token <- generate_token(user_name = user_name, 
-                              country_code = country_code)
+                              country_code = country_code, 
+                              base_url = base_url)
     }
   }else{
     token <- generate_token(user_name = user_name, 
-                            country_code = country_code)
+                            country_code = country_code, 
+                            base_url = base_url)
   }
 
   return(token)
   }
 
 # function to list the reports users have access to
-get_list_of_t2_reports <- function(token, country_code, user_name, replace = FALSE){
+get_list_of_t2_reports <- function(token, country_code, user_name, base_url = "https://www.spc.int/", replace = FALSE){
   
+  if (base_url == "https://nsap.ofp.spc.int/"){
+    URL = "https://nsapapi.ofp.spc.int/api/ReportDefinition/AllSimple"
+    URL_report = "https://nsapapi.ofp.spc.int/api/ReportDefinition/ByGuid?guid="
+    tufman_module = "General"
+  }else if (base_url == "https://www.spc.int/"){
+    URL = "https://www.spc.int/ofp/tufman2api/api/ReportDefinition/AllSimple"
+    URL_report = "https://www.spc.int/ofp/tufman2api/api/ReportDefinition/ByGuid?guid="
+    tufman_module = "Reports"
+  }else{
+    stop("The base url you entered is not valid, please use either 'https://www.spc.int/' or 'https://nsap.ofp.spc.int/'")
+  }
   
   if (replace){
     filename_csv <- paste0("./data/list_of_t2_reports_", tolower(country_code), ".csv")
@@ -102,12 +138,12 @@ get_list_of_t2_reports <- function(token, country_code, user_name, replace = FAL
     "curl",
     args = c(
       "-X", "GET",
-      "https://www.spc.int/ofp/tufman2api/api/ReportDefinition/AllSimple",
+      URL,
       "-H", "accept: application/json, text/plain, */*'",
       "-H", paste0("authorization: Bearer ", token),
       "-H", "content-type: application/json",
       "-H", paste0("tufinstance: ", country_code),
-      "-H", "tufmodule: Reports",
+      "-H", paste0("tufmodule: ", tufman_module),
       "-H", paste0("tufuser: ", user_name)
     )
   )
@@ -132,7 +168,7 @@ get_list_of_t2_reports <- function(token, country_code, user_name, replace = FAL
       "curl",
       args = c(
         "-X", "GET",
-        paste0("https://www.spc.int/ofp/tufman2api/api/ReportDefinition/ByGuid?guid=", sel_guid),
+        paste0(URL_report, sel_guid),
         "-H", "accept: application/json, text/plain, */*'",
         "-H", paste0("authorization: Bearer ", token),
         "-H", "content-type: application/json",
@@ -192,27 +228,30 @@ get_list_of_t2_reports <- function(token, country_code, user_name, replace = FAL
   print(paste0("Saving reports available as a new csv: ", filename_csv))
   write.csv(all_reports_with_attrs, file = filename_csv)
   
-  # get the unique attributes based on all reports
-  # unique_attrs <- all_reports_with_attrs$report_attrs |>
-  #   paste(collapse = ",") |>                # collapse all values into one string
-  #   str_split(",") |>                       # split by commas
-  #   unlist() |>                             # flatten the list
-  #   str_trim() |>                           # remove leading/trailing spaces
-  #   discard(~ .x == "") |>                  # remove empty entries (requires purrr)
-  #   unique() |>                             # get unique words
-  #   sort()                                  # optional: sort alphabetically
-  
   return(all_reports_with_attrs)
-  
-  # return(list(t2_reports = all_reports_with_attrs, 
-  #             unique_attrs = unique_attrs))
   
   }
 
 # function to get the data from selected reports
-get_reports <- function(token, user_name, country_code, filtered_reports, attrs,
+get_reports <- function(token, 
+                        user_name, 
+                        country_code, 
+                        filtered_reports, 
+                        attrs,
                         base_url = "https://www.spc.int/ofp/tufman2api/api/ReportDefinition/DownloadResults",
-                        lang = "en",record_current_date = TRUE, overwrite = FALSE){
+                        record_current_date = TRUE, 
+                        overwrite = FALSE){
+  
+  
+  if (base_url == "https://nsapapi.ofp.spc.int/api/ReportDefinition/DownloadResults"){
+    URL = "https://nsapapi.ofp.spc.int/api/ReportDefinition/AllSimple"
+    data_folder = "./data/nsap_reports_data/"
+    
+  }else if (base_url == "https://www.spc.int/ofp/tufman2api/api/ReportDefinition/DownloadResults"){
+    data_folder = "./data/t2_reports_data/"
+  }else{
+    stop("The base url you entered is not valid, please use either 'https://www.spc.int/ofp/tufman2api/api/ReportDefinition/DownloadResults' or 'https://nsapapi.ofp.spc.int/api/ReportDefinition/DownloadResults'")
+  }
 
     reports_selected <- filtered_reports |>
       pull(title)
@@ -230,16 +269,14 @@ get_reports <- function(token, user_name, country_code, filtered_reports, attrs,
       group_by <- report_info$report_group_by
       
       
-      # File exists? 
-      
-      dir.create("./data/t2_reports_data", showWarnings = FALSE, recursive = TRUE)
+      dir.create(data_folder, showWarnings = FALSE, recursive = TRUE)
       
       if (record_current_date) {
-        filename_csv <- paste0("./data/t2_reports_data/",
+        filename_csv <- paste0(data_folder,
                                tolower(country_code), "_",
                                user_id, "_", Sys.Date(), ".csv")
       } else {
-        filename_csv <- paste0("./data/t2_reports_data/",
+        filename_csv <- paste0(data_folder,
                                tolower(country_code), "_",
                                user_id, ".csv")
       }
@@ -268,7 +305,7 @@ get_reports <- function(token, user_name, country_code, filtered_reports, attrs,
         
         # Build the full curl URL
         api_url <- glue::glue(
-          "{base_url}?guid={guid}&lang={lang}&runParams={runParams_encoded}"
+          "{base_url}?guid={guid}&lang=en&runParams={runParams_encoded}"
         )
         
         ret <- run(
